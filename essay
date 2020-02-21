@@ -1,0 +1,76 @@
+#!/usr/bin/env node
+
+let cheerio = require('cheerio')
+let fs = require('fs')
+
+let raw = fs.readFileSync('/dev/stdin').toString()
+    .replace(/<(xa|nota)\b/g, '<a')    // fix random junk
+    .replace(/<ximg\b/g, '<img')    // fix random junk
+let $ = cheerio.load(raw)
+
+let title = $('title').text()
+
+let doc = parse()
+let body = doc.body
+let date = doc.date[1]
+
+function parse() {
+    let schemas = [['font', /^([^<>]+)<br><br>/],
+                   ['td > p > font', /^([^<>]+)<br><br>/],
+                   ['td > p > font', () => {
+                       return $('font p').text().trim()
+                   }],
+                   ['font', /<p>\s*([^<>]+)<br><br>/],
+                   ['font', /<br><br>([^<>]+)<br><br>/]]
+    for (let schema of schemas) {
+        console.error(schema)
+        let body = $(schema[0])
+        let html = body.html()
+        if (html) {
+            if (typeof schema[1] === 'function') {
+                let date = schema[1]()
+                let m = ['', date]
+                m.index = 0
+                return {body, date: m}
+            } else {
+                let m = html.match(schema[1])
+                if (m) return {body, date: m}
+            }
+        }
+    }
+    throw new Error('parse error')
+}
+
+body.find('font').removeAttr('color')
+
+let comment = body.find('i').first()
+if (comment.text().trim()[0] === '(') comment.wrap('<aside class="comment">')
+
+body = body.html()
+let begin = doc.date.index
+let end = doc.date.index + doc.date[0].length
+
+console.error(begin, end)
+
+body = (body.substr(0, begin) + body.slice(end)) // skip date
+    .replace(/<br><br>/g, '</p><p>')
+    // separate the article text form the notes
+    .replace(/<p>\s*?<b>Notes:?<\/b><\/p>/g, '</div>$&')
+    .replace(/<p>\s*?<b>([^<>]+)<\/b><\/p>/g, '<h3>$1</h3>')
+
+process.stdout.write(`<!doctype html>
+<meta charset="utf-8">
+<title>${title}</title>
+<meta name="author" content="Paul Graham">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  div p { margin: 0; padding: 0; }
+  div p + p { text-indent: 2em; }
+  .comment { margin: 1em 0; }
+</style>
+
+<h2 class="title">${title}</h2>
+<p>Paul Graham</p>
+<p>${date}</p>
+
+<div><p>${body}</p>`)
