@@ -14,7 +14,7 @@ let body = $($('table')[1])
 replace_with_contents(body, 'font')
 
 let comment = body.find('i').first()
-if (comment.text().trim()[0] === '(') comment.wrap('<aside class="part">')
+if (comment.text().trim()[0] === '(') comment.wrap('<div class="part">')
 
 body.find('img[src*="yimg.com"]').remove()
 body.find('img[src*="virtumundo.com"]').remove()

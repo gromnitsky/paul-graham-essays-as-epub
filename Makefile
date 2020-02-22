@@ -15,7 +15,7 @@ $(if $(no-recursion),,$(eval sinclude $(out)/index.mk))
 # last time I saw this kind of html was ~2003; it's horrible!
 $(out)/index.txt:
 	$(mkdir)
-	curl -LfSs http://www.paulgraham.com/articles.html | adieu -pe '$$("td font img").map( (_,v) => $$(v).prev()).filter( (_,v) => /\.html$$/.test($$(v).attr("href"))).map( (_,v) => $$(v).attr("href") + "\t" + $$(v).text() ).get().join("\n")' > $@
+	curl -LfSs http://www.paulgraham.com/articles.html | adieu -pe '$$("td font img").map( (_,v) => $$(v).prev()).filter( (_,v) => /\.html$$/.test($$(v).attr("href"))).map( (_,v) => $$(v).attr("href") + "\t" + $$(v).text() ).get().join("\n")' | grep -v lwba.html > $@
 
 $(out)/index.mk: $(out)/index.txt
 	awk -F"\t" '{print "$(out)/raw/" $$1}' $< | xargs $(MAKE) no-recursion=1
@@ -26,17 +26,16 @@ $(out)/%.html: $(out)/raw/%.html
 	-tidy -miq --show-warnings no $@
 
 .PHONY: epub mobi
-epub: $(out)/book.epub
-mobi: $(out)/book.mobi
+epub: $(out)/graham,paul__essays.epub
+mobi: $(out)/graham,paul__essays.mobi
 
-$(out)/book.epub: $(out)/index.html
-	ebook-convert $< $@ -m $(src)/meta.xml --page-breaks-before='//*[@class="title"]' --level1-toc '//*[@class="title"]'
+$(out)/%.epub: $(out)/_toc.html; $(calibre)
+$(out)/%.mobi: $(out)/_toc.html; $(calibre)
 
-$(out)/index.html: $(essays.dest)
-	erb -r date $(src)/index.erb < $(out)/index.txt > $@
+$(out)/_toc.html: $(essays.dest)
+	erb -r date $(src)/toc.erb < $(out)/index.txt > $@
 
-$(out)/%.mobi: $(out)/%.epub
-	cd $(dir $@) && kindlegen $(notdir $<) -o $(notdir $@)
+calibre = ebook-convert $< $@ --minimum-line-height=0 --breadth-first -m $(src)/meta.xml --page-breaks-before='//*[@class="title"]' --level1-toc '//*[@class="title"]'
 
 mkdir = @mkdir -p $(dir $@)
 .DELETE_ON_ERROR:
