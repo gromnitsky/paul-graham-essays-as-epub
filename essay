@@ -11,18 +11,20 @@ let $ = cheerio.load(raw)
 let title = $('title').text()
 let body = $($('table')[1])
 
-body.find('font').removeAttr('color').removeAttr('size').removeAttr('face')
+replace_with_contents(body, 'font')
 
 let comment = body.find('i').first()
 if (comment.text().trim()[0] === '(') comment.wrap('<aside class="part">')
 
 body.find('img[src*="yimg.com"]').remove()
 body.find('img[src*="virtumundo.com"]').remove()
+body.find('img[src="http://ycombinator.com/images/y18.gif"]').remove()
+body.find('a[href*="reddit.com"] img').remove()
 
 body = body.html().replace(/<br><br>/g, '</p><p>')
     // separate the article text form the notes
     .replace(/<p>\s*?<b>Notes:?<\/b><\/p>/g, '</div>$&')
-    .replace(/<p>\s*?<b>([^<>]+)<\/b><\/p>/g, '<h3>$1</h3>')
+//    .replace(/<p>\s*?<b>([^<>]+)<\/b><\/p>/g, '<h3>$1</h3>')
 
 let html = `<!doctype html>
 <meta charset="utf-8">
@@ -41,12 +43,36 @@ let html = `<!doctype html>
 
 // get date
 $ = cheerio.load(html)
-let re = /^\s*(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}\s*$/
+let date = '((January|February|March|April|May|June|July|August|September|October|November|December)\\s+\\d{4})'
+let found = false
+let re = new RegExp(`^${date}(\\s*|,\\s+(corrected|rev\\.?)\\s+${date}|\\s+\\(rev\\.\\s+${date}\\))$`)
 $('p').each( (_,v) => {
-    let text = $(v).text()
-    if (re.test(text)) {
-        return !$(v).replaceWith(`<div class="part"><time datetime=${new Date().toISOString()}>${text}</time></div>`)
+    let text = $(v).text().trim()
+    let m = text.match(re); if (m) {
+        found = true
+        return !$(v).replaceWith(`<div class="part"><time datetime=${new Date(m[1]).toISOString()}>${text}</time></div>`)
     }
 })
 
+if (!found) console.error(111, 'failed to extract date')
+
+rename($, 'p > b', '<h3>')
+
 process.stdout.write($.html())
+
+
+function rename($, from, to) {
+    $(from).each( (_, v) => {
+        if (v.prev && v.prev.type === 'text' && v.prev.data.trim()) {
+            console.error(222, `refusing to rename ${from} to ${to}: ${$(v).contents()}`)
+            return
+        }
+        $(v).replaceWith(function() {
+            return $(to).append($(this).contents())
+        })
+    })
+}
+
+function replace_with_contents(chnode, query) {
+    chnode.find(query).replaceWith(function() { return $(this).contents() })
+}
