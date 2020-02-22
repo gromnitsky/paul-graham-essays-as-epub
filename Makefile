@@ -39,3 +39,6 @@ calibre = ebook-convert $< $@ --minimum-line-height=0 --breadth-first -m $(src)/
 
 mkdir = @mkdir -p $(dir $@)
 .DELETE_ON_ERROR:
+
+upload: mobi epub
+	rsync -avPL --delete -e ssh $(out)/*.{epub,mobi} gromnitsky@web.sourceforge.net:/home/user-web/gromnitsky/htdocs/lit/graham,paul__essays/
