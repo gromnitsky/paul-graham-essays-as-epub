@@ -29,8 +29,8 @@ $(out)/%.html: $(out)/raw/%.html
 epub: $(out)/graham,paul__essays.epub
 mobi: $(out)/graham,paul__essays.mobi
 
-$(out)/%.epub: $(out)/_toc.html; $(calibre)
-$(out)/%.mobi: $(out)/_toc.html; $(calibre)
+$(out)/%.epub: $(out)/_toc.html $(src)/meta.xml; $(calibre)
+$(out)/%.mobi: $(out)/_toc.html $(src)/meta.xml; $(calibre)
 
 $(out)/_toc.html: $(essays.dest)
 	erb -r date $(src)/toc.erb < $(out)/index.txt > $@
