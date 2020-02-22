@@ -1,0 +1,11 @@
+<h2>Table of contents</h2>
+
+<p>Latest update: <%= Date.today %></p>
+
+<ul>
+
+<% $stdin.read.split("\n").each {|line| line = line.split "\t" %>
+  <li><a href="<%= line[0] %>"><%= line[1] %></a></li>
+<% } %>
+
+</ul>
